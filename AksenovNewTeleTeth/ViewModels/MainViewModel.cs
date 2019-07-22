@@ -1,26 +1,28 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Threading;
-using Microsoft.VisualBasic.FileIO;
 using AksenovNewTeleTeth.Models;
-using System.Globalization;
+using AksenovNewTeleTeth.BusinessLogic;
+using DevExpress.Mvvm;
+using System.Collections.ObjectModel;
+using DevExpress.Mvvm.DataAnnotations;
 
 namespace AksenovNewTeleTeth.ViewModels
 {
-    public class MainViewModel: Base
+    public class MainViewModel: ViewModelBase
     {
-        public UserCommand DownloadActionCommand { get; set; }
-        public UserCommand StopDownloadActionCommand { get; set; }
-        public UserCommand DownloadDBActionCommand { get; set; }
-        public UserCommand UploadDBActionCommand { get; set; }
-        public UserCommand CleanDataGridActionCommand { get; set; }
+        public DelegateCommand DownloadActionCommand { get; set; }
+        public DelegateCommand StopDownloadActionCommand { get; set; }
+        public DelegateCommand DownloadDBActionCommand { get; set; }
+        public DelegateCommand UploadDBActionCommand { get; set; }
+        public DelegateCommand CleanDataGridActionCommand { get; set; }
+        public DelegateCommand InitCommand { get; set; }
 
-        private List<MainObject> _MainObjects = new List<MainObject>();
-        public List<MainObject> MainObjects
+        protected virtual IOpenFileDialogService OpenFileDialogService { get { return null; } }
+
+        CancellationTokenSource cts;
+
+        private ObservableCollection<MainObject> _MainObjects = new ObservableCollection<MainObject>();
+        public ObservableCollection<MainObject> MainObjects
         {
             get { return _MainObjects; }
             set
@@ -28,12 +30,10 @@ namespace AksenovNewTeleTeth.ViewModels
                 if(_MainObjects!=value)
                 {
                     _MainObjects = value;
-                    OnPropertyChanged("MainObjects");
+                    RaisePropertyChanged("MainObjects");
                 }
             }
         }
-
-        CancellationTokenSource cts;
 
         public Progressbar _progressBar = new Progressbar();
         public Progressbar progressBar {
@@ -43,7 +43,7 @@ namespace AksenovNewTeleTeth.ViewModels
                 if (_progressBar != value)
                 {
                     _progressBar = value;
-                    OnPropertyChanged("progressBar");
+                    RaisePropertyChanged("progressBar");
                 }
             }
         }
@@ -58,259 +58,97 @@ namespace AksenovNewTeleTeth.ViewModels
                 if (_NotBlockElement != value)
                 {
                     _NotBlockElement = value;
-                    OnPropertyChanged("NotBlockElement");
+                    RaisePropertyChanged("NotBlockElement");
                 }
             }
         }
 
         public MainViewModel()
         {
-            DownloadActionCommand = new UserCommand(DownloadAction);
-            StopDownloadActionCommand = new UserCommand(StopDownloadAction);
-            DownloadDBActionCommand = new UserCommand(DownloadDBAction);
-            UploadDBActionCommand = new UserCommand(UploadDBAction);
-            CleanDataGridActionCommand = new UserCommand(CleanDataGridAction);
-            NotBlockElement = true;
+            DownloadActionCommand = new DelegateCommand(DownloadAction);
+            StopDownloadActionCommand = new DelegateCommand(StopDownloadAction);
+            DownloadDBActionCommand = new DelegateCommand(DownloadDBAction);
+            UploadDBActionCommand = new DelegateCommand(UploadDBAction);
+            CleanDataGridActionCommand = new DelegateCommand(CleanDataGridAction);
+            InitCommand = new DelegateCommand(Init);
         }
 
-        #region download data svc file
-        public async void DownloadAction()
+        public void Init()
         {
-            List<string[]> listString = new List<string[]>();
+            MainObjects = new ObservableCollection<MainObject>();
             cts = new CancellationTokenSource();
-            CancellationToken token = cts.Token;
-            string path = FindFile();
-            if (!String.IsNullOrEmpty(path))
+            StopWork();
+        }
+
+        public void DownloadAction()
+        {
+            StartWork();
+            FileReader svc = new FileReader();
+            svc.StopWork += Svc_StopWork;
+            svc.Init(cts);
+            MainObjects=svc.MainObjects;
+        }
+
+        private void Svc_StopWork(object sender, EventArgs e)
+        {
+            if(sender is FileReader)
             {
-                NotBlockElement = false;
-                progressBar.Work = true;
-                var result = await ReadFileAsync(path, token);
-                progressBar.Work = false;
-                NotBlockElement = true;
-                if (result != null)
-                {
-                    listString.AddRange(result);
-                    ConvertDataFile(listString);
-                }
+                StopWork();
             }
         }
-
-        public void ConvertDataFile(List<string[]> masDataSVC)
-        {
-            int[] numberColumn = FindNameColumns(masDataSVC);
-
-            IFormatProvider formatProvider = new NumberFormatInfo { NumberDecimalSeparator = "." };
-            foreach(var i in masDataSVC)
-            {
-                var ii = i[numberColumn[8]];
-                MainObject main = new MainObject()
-                {
-                    Id = 0,
-                    Date = DateTime.Parse(i[numberColumn[0]]),
-                    PointObjectA = new PointObject
-                    {
-                        Id = 0,
-                        Name = i[numberColumn[1]],
-                        Latitude = double.Parse(i[numberColumn[8]],formatProvider),
-                        Longitude = double.Parse(i[numberColumn[9]], formatProvider),
-                        Type = i[numberColumn[2]]
-
-                    },
-                    Color = i[numberColumn[6]],
-                    Direction = i[numberColumn[5]],
-                    Intensity = Int32.Parse(i[numberColumn[7]]),
-                    PointObjectB = new PointObject
-                    {
-                        Id = 0,
-                        Name = i[numberColumn[3]],
-                        Latitude = double.Parse(i[numberColumn[10]], formatProvider),
-                        Longitude = double.Parse(i[numberColumn[11]], formatProvider),
-                        Type = i[numberColumn[4]]
-                    }
-                };
-                MainObjects.Add(main);
-            }
-        }
-
-        public int[] FindNameColumns(List<string[]> masDataSVC)
-        {
-            string[] masNameColumn = { "Date", "Object A", "Type A", "Object B", "Type B", "Direction", "Color", "Intensity", "LatitudeA", "LongitudeA", "LatitudeB", "LongitudeB" };
-            int[] number = new int[12];
-
-            foreach (var i in masDataSVC)
-            {
-                for (int j = 0; j < i.Length; j++)
-                {
-                    for (int k = 0; k < masNameColumn.Length; k++)
-                    {
-                        if (i[j] == masNameColumn[k])
-                        {
-                            number[k] = j;
-                            break;
-                        }
-                    }
-                }
-                masDataSVC.Remove(i);
-                break;
-            }
-            return number;
-        }
-
-        public string FindFile()
-        {
-            Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog();
-            dialog.Filter = "Text documents (*.csv)|*.csv|All files (*.*)|*.*";
-            dialog.FilterIndex = 1;
-
-            Nullable<bool> result = dialog.ShowDialog();
-            string filename = "";
-            if (result == true)
-            {
-                filename = dialog.FileName;
-            }
-            return filename;
-        }
-
-        public async Task<List<string[]>> ReadFileAsync(string filename, CancellationToken token)
-        {
-            if (token.IsCancellationRequested)
-                return null;
-            var result = await Task.Run(() => ReadFile(filename, token));
-            return result;
-        }
-
-        public List<string[]> ReadFile(string filename, CancellationToken token)
-        {
-            using (TextFieldParser textFieldParser = new TextFieldParser(filename))
-            {
-                textFieldParser.TextFieldType = FieldType.Delimited;
-                textFieldParser.SetDelimiters(";");
-                List<string[]> listStringMasSVC = new List<string[]>();
-                while (!textFieldParser.EndOfData)
-                {
-
-                    if (token.IsCancellationRequested)
-                    {
-                        return null;
-                    }
-                    string[] Fields = textFieldParser.ReadFields().Where(n => !string.IsNullOrEmpty(n)).ToArray();
-                    listStringMasSVC.Add(Fields);
-                }
-                return listStringMasSVC;
-            }
-        }
-
-        #endregion
 
         public void StopDownloadAction()
         {
             if(cts!=null)
             {
                 cts.Cancel();
-                progressBar.Work = false;
-                NotBlockElement = true;
+                cts = new CancellationTokenSource();
             }
+            StopWork();
         }
 
-        #region download data
         public void DownloadDBAction()
         {
+            StartWork();
+            DataBase db = new DataBase();
+            db.StopWork += Db_StopWork;
+            db.DownloadDBAction();
+            MainObjects=(db.MainObjects);
+        }
+
+        private void Db_StopWork(object sender, EventArgs e)
+        {
+            if (sender is DataBase)
+            {
+                StopWork();
+            }
+        }
+
+        private void StopWork()
+        {
+            NotBlockElement = true;
+            progressBar.Work = false;
+        }
+
+        private void StartWork()
+        {
             NotBlockElement = false;
             progressBar.Work = true;
-
-            using (var con = new UserContext())
-            {
-                var i = con.MainObjects.Select(x => new
-                {
-                    Id = x.Id,
-                    Date = x.Date,
-                    PointObjectAId = x.PointObjectA.Id,
-                    LatitudeA = x.PointObjectA.Latitude,
-                    LongitudeA = x.PointObjectA.Longitude,
-                    NameA = x.PointObjectA.Name,
-                    TypeA = x.PointObjectA.Type,
-                    PointObjectBId = x.PointObjectB.Id,
-                    LatitudeB = x.PointObjectB.Latitude,
-                    LongitudeB = x.PointObjectB.Longitude,
-                    NameB = x.PointObjectB.Name,
-                    TypeB = x.PointObjectB.Type,
-                    Color = x.Color,
-                    Direction = x.Direction,
-                    Intensity = x.Intensity
-                }).AsEnumerable().Select(y => new MainObject
-                {
-                    Id = y.Id,
-                    Date = y.Date,
-                    PointObjectA = new PointObject
-                    {
-                        Id = y.PointObjectAId,
-                        Latitude = y.LatitudeA,
-                        Longitude = y.LongitudeA,
-                        Name = y.NameA,
-                        Type = y.TypeA
-
-                    },
-                    PointObjectB = new PointObject
-                    {
-                        Id = y.PointObjectBId,
-                        Latitude = y.LatitudeB,
-                        Longitude = y.LongitudeB,
-                        Name = y.NameB,
-                        Type = y.TypeB
-                    },
-                    Color = y.Color,
-                    Direction = y.Direction,
-                    Intensity = y.Intensity
-                }).ToList();
-                MainObjects = i;
-            }
-            progressBar.Work = false;
-            NotBlockElement = true;
         }
-        #endregion
 
-        #region upload data database
-
-        public async void UploadDBAction()
+        public void UploadDBAction()
         {
-            if (MainObjects == null) return;
-            progressBar.Work = true;
-            NotBlockElement = false;
-            CancellationToken token = cts.Token;
-            var result = await UploadDataAsync(MainObjects, token);
-            progressBar.Work = false;
-            NotBlockElement = true;
+            if (MainObjects.Count==0) return;
+            StartWork();
+            DataBase db = new DataBase();
+            db.StopWork += Db_StopWork;
+            db.UploadDBAction(MainObjects,cts);
         }
 
-        public async Task<bool> UploadDataAsync(List<MainObject> list, CancellationToken token)
-        {
-            if (token.IsCancellationRequested)
-                return false;
-            var result = await Task.Run(() => UploadData(list, token));
-            return result;
-        }
-
-        public bool UploadData(List<MainObject> list, CancellationToken token)
-        {
-            using (var con = new UserContext())
-            {
-                foreach(var element in list)
-                {
-                    if (token.IsCancellationRequested)
-                    {
-                        return false;
-                    }
-                    con.MainObjects.Add(element);
-                }
-                con.SaveChanges();
-            }
-            return true;
-        }
-        #endregion
 
         public void CleanDataGridAction()
         {
-            MainObjects= new List<MainObject>();
+            Init();
         }
 
     }

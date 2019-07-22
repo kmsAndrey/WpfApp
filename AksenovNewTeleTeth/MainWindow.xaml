@@ -15,6 +15,10 @@
         <local:MainViewModel/>
     </Window.DataContext>
 
+    <dxmvvm:Interaction.Behaviors>
+        <dxmvvm:EventToCommand Event="FrameworkElement.Loaded"  Command="{Binding InitCommand}"/>
+    </dxmvvm:Interaction.Behaviors>
+
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" MinWidth="400"/>

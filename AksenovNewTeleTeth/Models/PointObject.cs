@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DevExpress.Mvvm;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AksenovNewTeleTeth.Models
 {
-    public class PointObject: Base
+    public class PointObject: ViewModelBase
     {
         private int _Id;
         public int Id
@@ -16,7 +17,7 @@ namespace AksenovNewTeleTeth.Models
             {
                 if (_Id != value)
                     _Id = value;
-                OnPropertyChanged("Id");
+                RaisePropertiesChanged("Id");
             }
         }
 
@@ -28,7 +29,7 @@ namespace AksenovNewTeleTeth.Models
             {
                 if (_Name != value)
                     _Name = value;
-                OnPropertyChanged("Name");
+                RaisePropertiesChanged("Name");
             }
         }
 
@@ -40,7 +41,7 @@ namespace AksenovNewTeleTeth.Models
             {
                 if (_Type != value)
                     _Type = value;
-                OnPropertyChanged("Type");
+                RaisePropertiesChanged("Type");
             }
         }
 
@@ -52,7 +53,7 @@ namespace AksenovNewTeleTeth.Models
             {
                 if (_Latitude != value)
                     _Latitude = value;
-                OnPropertyChanged("Latitude");
+                RaisePropertiesChanged("Latitude");
             }
         }
 
@@ -64,7 +65,7 @@ namespace AksenovNewTeleTeth.Models
             {
                 if (_Longitude != value)
                     _Longitude = value;
-                OnPropertyChanged("Longitude");
+                RaisePropertiesChanged("Longitude");
             }
         }
     }

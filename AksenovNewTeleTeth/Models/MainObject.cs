@@ -7,10 +7,11 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using DevExpress.Mvvm;
 
 namespace AksenovNewTeleTeth.Models
 {
-    public class MainObject: Base
+    public class MainObject: ViewModelBase
     {
         private int _Id;
         public int Id
@@ -20,7 +21,7 @@ namespace AksenovNewTeleTeth.Models
             {
                 if (_Id != value)
                     _Id = value;
-                OnPropertyChanged("Id");
+                RaisePropertiesChanged("Id");
             }
         }
 
@@ -32,7 +33,7 @@ namespace AksenovNewTeleTeth.Models
             {
                 if (_Date != value)
                     _Date = value;
-                OnPropertyChanged("Date");
+                RaisePropertiesChanged("Date");
             }
         }
 
@@ -45,7 +46,7 @@ namespace AksenovNewTeleTeth.Models
             {
                 if (_PointObjectA != value)
                     _PointObjectA = value;
-                OnPropertyChanged("PointObjectA");
+                RaisePropertiesChanged("PointObjectA");
             }
         }
 
@@ -57,19 +58,19 @@ namespace AksenovNewTeleTeth.Models
             {
                 if (_Direction != value)
                     _Direction = value;
-                OnPropertyChanged("Direction");
+                RaisePropertiesChanged("Direction");
             }
         }
 
         private string _Color;
         public string Color
         {
-            get { return _Direction; }
+            get { return _Color; }
             set
             {
                 if (_Color != value)
                     _Color = value;
-                OnPropertyChanged("Color");
+                RaisePropertiesChanged("Color");
             }
         }
 
@@ -81,7 +82,7 @@ namespace AksenovNewTeleTeth.Models
             {
                 if (_Intensity != value)
                     _Intensity = value;
-                OnPropertyChanged("Intensity");
+                RaisePropertiesChanged("Intensity");
             }
         }
 
@@ -94,7 +95,7 @@ namespace AksenovNewTeleTeth.Models
             {
                 if (_PointObjectB != value)
                     _PointObjectB = value;
-                OnPropertyChanged("PointObjectB");
+                RaisePropertiesChanged("PointObjectB");
             }
         }
     }

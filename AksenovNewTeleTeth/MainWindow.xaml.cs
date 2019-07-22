@@ -23,7 +23,6 @@ namespace AksenovNewTeleTeth
         public MainWindow()
         {
             InitializeComponent();
-            
         }
     }
 }
